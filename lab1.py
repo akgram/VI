@@ -129,6 +129,8 @@ match 'A':
     case _:
         print("Default") 
 
+#######################
+
 lista1 = [1, 7, 2, 4, 5]
 
 def parni(lista):

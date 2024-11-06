@@ -73,3 +73,8 @@ func("ovo", "je", 1, "recenica", key = "value", ki = "velj ju")
 f = input("unesi broj: ")
 print(f)
 
+####################
+
+
+
+
