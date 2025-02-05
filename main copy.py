@@ -5,7 +5,7 @@ from itertools import combinations
 import MinMax
 import random
 
-stb = [] # svi oznaceni stubovi (odigrani)
+stb = []
 povezani_stubovi = []
 zauzeta_komb = []
 istorija_poteza = []
@@ -14,16 +14,41 @@ simO = 0
 ukupno_trouglica = 0
 trenutni_igrac = ["igrac", "simbol"]
 
-line_ids = []
-point_ids = []
-simbol_ids = []
+def heuristika(igrac, protivnik):
+    global simX, simO, ukupno_trouglica, povezani_stubovi, zauzeta_komb
 
-def heuristika():
-    
-    razlika = simX - simO
+    # Razlika u trenutnom broju trouglova
+    trenutna_prednost = simX - simO if igrac == "X" else simO - simX
 
-    return razlika
+    # Potencijal za igrača i protivnika
+    potencijal_igrac = broj_potencijalnih_trouglova(igrac)
+    potencijal_protivnik = broj_potencijalnih_trouglova(protivnik)
 
+    # Heuristika: trenutna prednost + potencijalna prednost
+    return trenutna_prednost + potencijal_igrac - potencijal_protivnik
+
+
+def broj_potencijalnih_trouglova(igrac):
+    global stb
+
+    potencijal = 0
+
+    # Prolazimo kroz sve nepovezane kombinacije stubova
+    for prvi in stb:
+        for drugi in stb:
+            if drugi == prvi:
+                continue
+            for treci in stb:
+                if treci == prvi or treci == drugi:
+                    continue
+
+                # Proveravamo da li bi formirali trougao
+                if (proveri_povezanost(prvi, drugi) and proveri_povezanost(prvi, treci) and proveri_povezanost(drugi, treci) 
+                    and validna_kombinacija(prvi, drugi, treci)):
+                    potencijal += 1
+                    print(f"dobar potencijal: {potencijal}")
+
+    return potencijal
 
 def generisi_validne_poteze(stubovi, n):
     global povezani_stubovi, zauzeta_komb
@@ -62,25 +87,26 @@ def generisi_validne_poteze(stubovi, n):
             if validan:
                 potezi.append((red, kolona, smer))
 
-    print(potezi)
     return potezi
 
+
 def ukloni_gumicu(canvas, stubovi, red, kolona, smer, n):
-    global trenutni_igrac, stb
+    global povezani_stubovi
 
     selektovani_stubovi = []
+
+    # Pronalaženje prvog stuba
     for stub in stubovi:
         if stub[0] == red and stub[1] == kolona:
             selektovani_stubovi.append(stub)
-            stb.remove(stub)
             break
     else:
-        if trenutni_igrac[0] == "covek":
-            messagebox.showerror("Greška", "Nevalidna koordinata!")
+        messagebox.showerror("Greška", "Nevalidna koordinata za uklanjanje gumice!")
         return False
 
     kolona_u_last_row = kolona
 
+    # Pronalaženje ostalih stubova u smeru
     for i in range(1, 4):
         if smer == 'DD':
             novi_red = chr(ord(red) + i)
@@ -98,7 +124,7 @@ def ukloni_gumicu(canvas, stubovi, red, kolona, smer, n):
                 novi_kolona = kolona_u_last_row
             else:
                 novi_kolona = kolona_u_last_row - 1
-        
+
         elif smer == 'D':
             novi_red = red
             novi_kolona = kolona + i
@@ -106,14 +132,12 @@ def ukloni_gumicu(canvas, stubovi, red, kolona, smer, n):
         novi_stub = next((s for s in stubovi if s[0] == novi_red and s[1] == novi_kolona), None)
         if novi_stub:
             selektovani_stubovi.append(novi_stub)
-            stb.remove(novi_stub)
             kolona_u_last_row = novi_kolona
         else:
-            if trenutni_igrac[0] == "covek":
-                messagebox.showerror("Greška", "Izabrani smer izlazi iz granica table!")
+            messagebox.showerror("Greška", "Izabrani smer izlazi iz granica table za uklanjanje gumice!")
             return False
 
-    # Brisanje linija između stubova
+    # Uklanjanje linija između stubova
     for i in range(len(selektovani_stubovi) - 1):
         stub1 = selektovani_stubovi[i]
         stub2 = selektovani_stubovi[i + 1]
@@ -121,40 +145,35 @@ def ukloni_gumicu(canvas, stubovi, red, kolona, smer, n):
         x1, y1 = stub1[2], stub1[3]
         x2, y2 = stub2[2], stub2[3]
 
-        # Brisanje linije sa canvas-a
-        #canvas.create_line(x1, y1, x2, y2, fill="white", width=2)
-        
-        canvas.delete(line_ids.pop())
+        # Pronađi i ukloni liniju sa kanvasa
+        for item in canvas.find_all():
+            coords = canvas.coords(item)
+            if len(coords) == 4 and coords == [x1, y1, x2, y2]:
+                canvas.delete(item)
+                break
 
-        # Uklanjanje povezivanja iz liste povezanih stubova
+        # Uklanjanje veze iz liste povezanih stubova
         if (stub1, stub2) in povezani_stubovi:
             povezani_stubovi.remove((stub1, stub2))
         elif (stub2, stub1) in povezani_stubovi:
             povezani_stubovi.remove((stub2, stub1))
 
-    # Brisanje gumice sa stuba
+    # Uklanjanje krugova sa stubova
     for stub in selektovani_stubovi:
         x_pos, y_pos = stub[2], stub[3]
-        #canvas.create_oval(x_pos - 5, y_pos - 5, x_pos + 5, y_pos + 5, fill="white", outline="white")
-        canvas.delete(point_ids.pop())
 
-    #if simbol_ids:
-        #canvas.delete(simbol_ids.pop())
+        for item in canvas.find_all():
+            coords = canvas.coords(item)
+            if len(coords) == 4 and coords == [x_pos - 5, y_pos - 5, x_pos + 5, y_pos + 5]:
+                canvas.delete(item)
+                break
 
-    #print("uklonjena")
-    # Ako je bilo greške u formiranju trougla, vraćamo prethodno stanje
-    #while proveri_trougao(canvas, stubovi, boja):
-        #proveri_trougao(canvas, stubovi, boja)
-
-
-    
     return True
-
 
 
 def minimax(canvas, stubovi, dubina, maksimizuj, igrac, protivnik, alfa, beta, n):
     if dubina == 0 or kraj():
-        return heuristika(), None
+        return heuristika(igrac, protivnik), None
 
     najbolji_potez = None
 
@@ -162,7 +181,7 @@ def minimax(canvas, stubovi, dubina, maksimizuj, igrac, protivnik, alfa, beta, n
         max_eval = float('-inf')
         for red, kolona, smer in generisi_validne_poteze(stubovi, n): # los potez generise
             # Simuliraj potez
-            if postavi_gumicu(canvas, stubovi, red, kolona, smer, n, igrac) == None: # ne ulazi jer vraca None
+            if postavi_gumicu(canvas, stubovi, red, kolona, smer, n, igrac): # ne ulazi jer vraca None
                 vrednost, _ = minimax(canvas, stubovi, dubina - 1, False, igrac, protivnik, alfa, beta, n)
                 # Vrati stanje table
                 ukloni_gumicu(canvas, stubovi, red, kolona, smer, n)  # Potrebna funkcija za vraćanje
@@ -179,7 +198,7 @@ def minimax(canvas, stubovi, dubina, maksimizuj, igrac, protivnik, alfa, beta, n
         min_eval = float('inf')
         for red, kolona, smer in generisi_validne_poteze(stubovi, n): # los potez generise
             # Simuliraj potez
-            if postavi_gumicu(canvas, stubovi, red, kolona, smer, n, protivnik) == None: # ne ulazi jer vraca None
+            if postavi_gumicu(canvas, stubovi, red, kolona, smer, n, protivnik): # ne ulazi jer vraca None
                 vrednost, _ = minimax(canvas, stubovi, dubina - 1, True, igrac, protivnik, alfa, beta, n)
                 # Vrati stanje table
                 ukloni_gumicu(canvas, stubovi, red, kolona, smer, n)  # Potrebna funkcija za vraćanje
@@ -305,7 +324,7 @@ def proveri_trougao(canvas, stubovi, boja):
 
 
 def postavi_gumicu(canvas, stubovi, red, kolona, smer, n, boja):
-    global trenutni_igrac, stb
+    global trenutni_igrac
     selektovani_stubovi = []
 
     for stub in stubovi:
@@ -360,7 +379,7 @@ def postavi_gumicu(canvas, stubovi, red, kolona, smer, n, boja):
         x1, y1 = stub1[2], stub1[3]
         x2, y2 = stub2[2], stub2[3]
 
-        line_ids.append(canvas.create_line(x1, y1, x2, y2, fill=boja, width=2))
+        canvas.create_line(x1, y1, x2, y2, fill=boja, width=2)
 
         # dodavanje povezivanja u listu povezanih stubova
         if (stub1, stub2) not in povezani_stubovi and (stub2, stub1) not in povezani_stubovi:
@@ -368,14 +387,11 @@ def postavi_gumicu(canvas, stubovi, red, kolona, smer, n, boja):
 
     for stub in selektovani_stubovi:
         x_pos, y_pos = stub[2], stub[3]
-        point_ids.append(canvas.create_oval(x_pos - 5, y_pos - 5, x_pos + 5, y_pos + 5, fill=boja, outline=boja))
+        canvas.create_oval(x_pos - 5, y_pos - 5, x_pos + 5, y_pos + 5, fill=boja, outline=boja)
 
-    dodati_simboli = 0
+
     while proveri_trougao(canvas, stubovi, boja):
         proveri_trougao(canvas, stubovi, boja)
-        dodati_simboli = dodati_simboli + 1
-
-    print(f"dodata {dodati_simboli} simbola")
 
 
 def proveri_povezanost(stub1, stub2):
@@ -401,7 +417,7 @@ def stavi_simbol(canvas, stub1, stub2, stub3, boja):
         #simbol = "O"
         simO = simO + 1
         print(f"O: {simO}")
-    simbol_ids.append(canvas.create_text(cx, cy, text=trenutni_igrac[1], font=("Arial", 12, "bold"), fill=boja))
+    canvas.create_text(cx, cy, text=trenutni_igrac[1], font=("Arial", 12, "bold"), fill=boja)
 
 def validna_kombinacija(stub1, stub2, stub3):
     if ((stub1, stub2, stub3) not in zauzeta_komb and (stub1, stub3, stub2) not in zauzeta_komb and 
@@ -504,7 +520,7 @@ def start_game():
                 vrednost, najbolji_potez = minimax(canvas, stubovi, dubina, True, igrac, protivnik, float('-inf'), float('inf'), n)
                 if najbolji_potez:
                     red, kolona, smer = najbolji_potez
-                    if postavi_gumicu(canvas, stubovi, red, kolona, smer, len(stubovi), igrac) == False:
+                    if not postavi_gumicu(canvas, stubovi, red, kolona, smer, len(stubovi), igrac):
                         print("Greška: potez nije validan!")  # Provera ako se pojavi neočekivana greška
                 
                 turn_label.config(text="Računar je odigrao!", font=("Arial", 12, "bold"), fg="green")
@@ -570,9 +586,9 @@ def start_game():
         red_entry.config(state="disabled")
         trenutni_igrac[1] = "X" if trenutni_igrac[1] == "O" else "O"
         if igrac == "blue":
-            unos_frame.after(1200, lambda: potez_racunara(canvas, stubovi, "red", "blue", 1))
+            unos_frame.after(1200, lambda: potez_racunara(canvas, stubovi, "red", "blue", n))
         elif igrac == "red":
-            unos_frame.after(1200, lambda: potez_racunara(canvas, stubovi, "blue", "red", 1))
+            unos_frame.after(1200, lambda: potez_racunara(canvas, stubovi, "blue", "red", n))
         trenutni_igrac[0] = "covek"
 
     unos_frame = tk.Frame(igra_prozor, bg="lightgray")
@@ -594,11 +610,11 @@ def start_game():
     smer_menu = tk.OptionMenu(unos_frame, smer_var, "D", "DD", "DL")
     smer_menu.grid(row=2, column=1, pady=5)
 
-    potez_button = tk.Button(unos_frame, text="Odigraj potez", command=lambda: unesi_potez("blue"), bg="blue", fg="white", font=("Arial", 12, "bold"), state="normal" if first == "covek" else "disabled")
+    potez_button = tk.Button(unos_frame, text="Odigraj potez", command=lambda: unesi_potez("blue"), bg="#2196F3", fg="white", font=("Arial", 12, "bold"), state="normal" if first == "covek" else "disabled")
     potez_button.grid(row=3, column=0, columnspan=2, pady=10)
 
     if first == "racunar":
-        potez_racunara(canvas, stubovi, "red", "blue", 1)
+        potez_racunara(canvas, stubovi, "red", "blue", n)
 
     igra_prozor.mainloop()
 

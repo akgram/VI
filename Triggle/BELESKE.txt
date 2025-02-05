@@ -1,0 +1,5 @@
+ukloni gumicu uklanja ali ne i simbol, to se treba resi i kao dobro je
+
+minmax da se sredi heuristika i generisanje poteza (nekad odigra wtf potez tj nevalidan)
+
+dizajn mozda malo
