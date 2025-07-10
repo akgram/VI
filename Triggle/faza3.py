@@ -206,8 +206,8 @@ def generisi_potez(n):
 
         if redovi_iz_istorije:
             # kombinuj istorijske redove i sve ostale za vecu verovatnocu poznatih redova
-            tezi_ka_poznatim = redovi_iz_istorije * 3 + svi_redovi  # favorizuje vec vidjene redove
-            return random.choice(tezi_ka_poznatim)
+            poznati = redovi_iz_istorije * 3 # favorizuje vec vidjene redove  # + svi_redovi?
+            return random.choice(poznati)
         else:
             return random.choice(svi_redovi)
 
@@ -249,7 +249,7 @@ def crtaj_stubove(canvas, x, y, r, n):
         for j in range(broj_stubova):
             x_pos = x_pos_start + j * r
             stubovi.append((chr(slovo + i), j + 1, x_pos, y_pos))  # koordinate stubova
-            canvas.create_oval(x_pos - 3, y_pos - 3, x_pos + 3, y_pos + 3, fill="black", outline="black")
+            canvas.create_oval(x_pos - 3, y_pos - 3, x_pos + 3, y_pos + 3, fill="black", outline="black") # iscrtavanje stubova
 
     # oznake iznad i ispod
     max_kolone = 2 * n - 1
@@ -312,6 +312,7 @@ def postavi_gumicu(canvas, stubovi, red, kolona, smer, n, boja):
     global trenutni_igrac
     selektovani_stubovi = []
 
+    # prvi stub
     for stub in stubovi:
         if stub[0] == red and stub[1] == kolona:
             selektovani_stubovi.append(stub)
@@ -324,8 +325,9 @@ def postavi_gumicu(canvas, stubovi, red, kolona, smer, n, boja):
 
     kolona_u_last_row = kolona
 
+    # ostala 3 stuba
     for i in range(1, 4):
-        if smer == 'DD':
+        if smer == 'DD': # kolko se uvecava dole tolko i desno
             novi_red = chr(ord(red) + i)
             if ord(novi_red) <= ord('A') + n - 1:
                 if ord(novi_red) == ord('A') + n:
@@ -335,14 +337,14 @@ def postavi_gumicu(canvas, stubovi, red, kolona, smer, n, boja):
             else:
                 novi_kolona = kolona_u_last_row
 
-        elif smer == 'DL':
+        elif smer == 'DL': # kolko se uvecava dole tolko i levo
             novi_red = chr(ord(red) + i)
             if ord(novi_red) <= ord('A') + n - 1:
                 novi_kolona = kolona_u_last_row
             else:
                 novi_kolona = kolona_u_last_row - 1
         
-        elif smer == 'D':
+        elif smer == 'D': # uvecava se desno
             novi_red = red
             novi_kolona = kolona + i
 
@@ -401,7 +403,7 @@ def stavi_simbol(canvas, stub1, stub2, stub3, boja):
         #simbol = "O"
         simO = simO + 1
         print(f"O: {simO}")
-    canvas.create_text(cx, cy, text=trenutni_igrac[1], font=("Arial", 12, "bold"), fill=boja)
+    canvas.create_text(cx, cy, text=trenutni_igrac[1], font=("Arial", 12, "bold"), fill=boja) # stampa simbol, slovo
 
 def validna_kombinacija(stub1, stub2, stub3):
     if ((stub1, stub2, stub3) not in zauzeta_komb and (stub1, stub3, stub2) not in zauzeta_komb and 
@@ -434,23 +436,23 @@ def start_game():
     trenutni_igrac[1] = simbol
 
     if first not in ['covek', 'racunar']:
-        messagebox.showerror("Greška", "Ko igra prvi? (covek/racunar)")
+        messagebox.showerror("Greška", "Prvi mora igrati 'covek' ili 'racunar'")
         return
     if simbol not in ['X', 'O']:
         messagebox.showerror("Greška", "Simbol prvog igrača mora biti X ili O")
         return
-    if not n.isdigit() or int(n) not in range(4, 9):
+    if not n.isdigit() or int(n) not in range(4, 9): # 4 uzima, 9 ne uzima
         messagebox.showerror("Greška", "Dimenzija table mora biti broj između 4 i 8")
         return
 
     n = int(n)
     global ukupno_trouglica
-    start = n + n - 1
+    start = n + n - 1 # najduzi red sa ovom dim
     for i in range(1, n - 1): # n-1 jer brojimo praznine pa ih ima -1 od dimenzije
         medjuZbir = start + i * 2
         ukupno_trouglica = ukupno_trouglica + medjuZbir
 
-    ukupno_trouglica = (ukupno_trouglica + start) * 2
+    ukupno_trouglica = (ukupno_trouglica + start) * 2 # gore i dole 
     print(ukupno_trouglica)
 
     root.destroy()
@@ -509,6 +511,7 @@ def start_game():
         
 
     def unesi_potez(igrac): # ovde je def jer nam trebaju podaci iz polja
+        # prosledjuje se igrac ali to je boja igraca
         if kraj():
             canvas.delete("all")  # brise sve elemente, moze i bez toga
             igra_prozor.destroy()
